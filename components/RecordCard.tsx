@@ -5,31 +5,6 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PrescriptionRecord, LabReportRecord } from '@/types/medical';
 
-// type PrescriptionRecord = {
-//   id: string;
-//   type: 'prescription';
-//   doctorName: string;
-//   department: string;
-//   hospitalName: string;
-//   purpose: string;
-//   date: string;
-//   uploadStatus: 'uploaded' | 'pending';
-// };
-
-// type LabReportRecord = {
-//   id: string;
-//   type: 'lab_report';
-//   doctorName: string;
-//   doctorDepartment: string;
-//   hospitalName: string;
-//   testName: string;
-//   prescribedBy: string;
-//   laboratoryName: string;
-//   laboratoryAddress: string;
-//   date: string;
-//   uploadStatus: 'uploaded' | 'pending';
-// };
-
 interface RecordCardProps {
   record: PrescriptionRecord | LabReportRecord;
   onView?: (id: string) => void;

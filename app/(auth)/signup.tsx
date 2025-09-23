@@ -5,7 +5,7 @@ import { Link, router } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff, User, Phone } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
-import {auth} from "@/Services/AuthService"
+import authService from "@/Services/AuthService"
 
 export default function SignupScreen() {
   const [formData, setFormData] = useState({
@@ -53,7 +53,7 @@ export default function SignupScreen() {
 
     setIsLoading(true);
     
-    await auth.signup(formData.email, formData.password, formData)
+    await authService.createAccountService(formData);
 
     // Simulate signup process
     setTimeout(() => {
@@ -63,7 +63,7 @@ export default function SignupScreen() {
         { text: 'OK', onPress: () => router.replace('/(tabs)/upload') }
       ]);
 
-    }, 2000);
+    }, 1000);
   };
 
   return (

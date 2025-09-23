@@ -5,7 +5,7 @@ import { Link } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
-import {auth} from "@/Services/AuthService"
+import authService from "@/Services/AuthService"
 
 
 export default function LoginScreen() {
@@ -24,7 +24,7 @@ export default function LoginScreen() {
     
     // Simulate login process
     setTimeout(() => {
-      auth.login(email,password)
+      authService.loginService({email,password})
     }, 1500);
     setIsLoading(false);
   };

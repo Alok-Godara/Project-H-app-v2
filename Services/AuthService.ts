@@ -1,50 +1,111 @@
+// import { User } from "lucide-react-native";
 import { supabase } from "./Supabase";
 
-class AuthService {
-	// Sign up a new user
-	async signup(email: string, password: string, data?: Record<string, any>) {
-		const { data: signUpData, error } = await supabase.auth.signUp({
-			email,
-			password,
-			options: { data },
-		});
-		return { user: signUpData?.user, session: signUpData?.session, error };
-	}
-
-	// Log in an existing user
-	async login(email: string, password: string) {
-		const { data: signInData, error } = await supabase.auth.signInWithPassword({
-			email,
-			password,
-		});
-		return { user: signInData?.user, session: signInData?.session, error };
-	}
-
-	// Log out the current user
-	async logout() {
-		const { error } = await supabase.auth.signOut();
-		return { error };
-	}
-
-	// Delete the current user (must be signed in)
-	async delete() {
-		const { data, error } = await supabase.auth.admin.deleteUser(
-			(await supabase.auth.getUser()).data.user?.id || ''
-		);
-		return { data, error };
-	}
-
-	// Update user profile (in 'profiles' table)
-	async updateProfile(updates: Record<string, any>) {
-		const user = (await supabase.auth.getUser()).data.user;
-		if (!user) return { error: 'No user logged in' };
-		const { data, error } = await supabase
-			.from('profiles')
-			.update(updates)
-			.eq('id', user.id)
-			.single();
-		return { data, error };
-	}
+interface CreateAccountParams {
+  email: string;
+  password: string;
+  name: string;
+  phone: string;
 }
 
-export const auth = new AuthService();
+interface LoginParams {
+  email: string;
+  password: string;
+}
+
+interface AuthResult {
+  user: any | null;
+  error: any | null;
+}
+
+export class AuthService {
+  async createAccountService(obj: CreateAccountParams): Promise<AuthResult> {
+    console.log(
+      "data for signup:",
+      obj.email,
+      obj.password,
+      obj.name,
+      obj.phone
+    );
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: obj.email,
+        password: obj.password,
+        options: {
+          data: { name: obj.name, phone: obj.phone, password: obj.password },
+        },
+      });
+      if (error) return { user: null, error };
+	  console.log(error);
+	  
+      if (data.user) {
+		console.log(data);
+        await supabase
+          .from("patients")
+          .insert([{ id: data.user.id, name: obj.name, email: data.user.email, phone: obj.phone }]);
+        return { user: data.user, error: null };
+      } else {
+        return { user: null, error: "User creation failed" };
+      }
+	  
+    } catch (error) {
+      return { user: null, error };
+    }
+  }
+
+  async loginService({ email, password }: LoginParams): Promise<AuthResult> {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) return { user: null, error };
+      return { user: data.user, error: null };
+    } catch (error) {
+      // console.error("Supabase service :: login :: error", error);
+      return { user: null, error };
+    }
+  }
+
+  async getCurrentUserService(): Promise<AuthResult> {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) return { user: null, error };
+      return { user: data.user, error: null };
+    } catch (error) {
+      // console.error("Supabase service :: getCurrentUser :: error", error);
+      return { user: null, error };
+    }
+  }
+
+  async logoutService(): Promise<boolean> {
+    try {
+      await supabase.auth.signOut();
+      return true;
+    } catch (error) {
+      console.error("Supabase service :: logout :: error", error);
+      return false;
+    }
+  }
+
+  // async signInWithGoogle() {
+  //   try {
+  //     const { data, error } = await supabase.auth.signInWithOAuth({
+  //       provider: "google",
+  //       options: {
+  //         redirectTo: String(import.meta.env.VITE_REDIRECT_URL),
+  //       },
+  //     });
+  //     if (error) throw error;
+
+  //     return data;
+  //   } catch (error) {
+  //     // console.error("Supabase service :: signInWithGoogle :: error", error);
+  //     throw error;
+  //   }
+  // }
+}
+
+const authService = new AuthService();
+
+export default authService;

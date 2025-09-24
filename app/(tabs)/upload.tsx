@@ -1,19 +1,36 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, Image as ImageIcon, Upload } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '@/constants/Colors';
-import { Typography } from '@/constants/Typography';
+import { Colors } from "@/constants/Colors";
+import { Typography } from "@/constants/Typography";
+import { insertRow, uploadImageToBucket } from "@/Services/Services";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { Camera, Image as ImageIcon, Upload } from "lucide-react-native";
+import React, { useState } from "react";
+import {
+  dummyMedicalEvent,
+  dummyDocument,
+} from "@/data/dummyMedicalEventAndDocument";
+import {
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function UploadScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const requestPermissions = async () => {
-    if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to make this work!');
+    if (Platform.OS !== "web") {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Sorry, we need camera roll permissions to make this work!"
+        );
         return false;
       }
     }
@@ -25,7 +42,7 @@ export default function UploadScreen() {
     if (!hasPermission) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -37,14 +54,20 @@ export default function UploadScreen() {
   };
 
   const takePhoto = async () => {
-    if (Platform.OS === 'web') {
-      Alert.alert('Camera not available', 'Camera functionality is not available on web platform.');
+    if (Platform.OS === "web") {
+      Alert.alert(
+        "Camera not available",
+        "Camera functionality is not available on web platform."
+      );
       return;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Sorry, we need camera permissions to make this work!');
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission needed",
+        "Sorry, we need camera permissions to make this work!"
+      );
       return;
     }
 
@@ -59,10 +82,76 @@ export default function UploadScreen() {
     }
   };
 
-  const uploadRecord = () => {
+  const uploadRecord = async () => {
     if (selectedImage) {
-      Alert.alert('Success', 'Medical record uploaded successfully!');
-      setSelectedImage(null);
+      try {
+        // 1. Upload to Supabase Storage
+        const fileUri = selectedImage;
+        const fileName = fileUri.split("/").pop() || `record_${Date.now()}.png`;
+        const fileExt = fileName.split(".").pop() || "png";
+        const bucket = "medical-records";
+        const path = `${Date.now()}_${fileName}`;
+
+        // Read file as blob
+        const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: "base64",
+        });
+        const fileBuffer = Buffer.from(fileBlob, "base64");
+
+        const { data: uploadData, error: uploadError } =
+          await uploadImageToBucket(
+            bucket,
+            path,
+            fileBuffer,
+            `image/${fileExt}`
+          );
+        if (uploadError) throw uploadError;
+
+        // 2. Store file_url
+        const file_url = uploadData?.path
+          ? `${uploadData.fullPath || uploadData.path}`
+          : "";
+
+        // // 3. Call external API (dummy placeholder)
+        // let api_data = null;
+        // try {
+        //   // Replace with your actual API call
+        //   const response = await fetch(
+        //     "https://your-api-endpoint.com/analyze",
+        //     {
+        //       method: "POST",
+        //       headers: { "Content-Type": "application/json" },
+        //       body: JSON.stringify({ file_url }),
+        //     }
+        //   );
+        //   api_data = await response.json();
+        // } catch {
+        //   api_data = null;
+        // }
+
+        // 3. Call dummy API to get medical event and document data
+        // Simulate API call by returning dummy data
+        // In real scenario, replace with actual API call
+        const apiResponse = {
+          medical_event: { ...dummyMedicalEvent },
+          document: { ...dummyDocument, file_url },
+        };
+
+        // 4. Update medical_events table with returned data
+        await insertRow("medical_events", apiResponse.medical_event);
+
+        // 5. Update documents table with returned data
+        await insertRow("documents", apiResponse.document);
+
+        Alert.alert("Success", "Medical record uploaded successfully!");
+        setSelectedImage(null);
+      } catch (err) {
+        let message = "Something went wrong.";
+        if (err && typeof err === "object" && "message" in err) {
+          message = (err as any).message;
+        }
+        Alert.alert("Upload Failed :", message);
+      }
     }
   };
 
@@ -70,7 +159,9 @@ export default function UploadScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Upload Medical Records</Text>
-        <Text style={styles.subtitle}>Add your prescriptions or lab reports</Text>
+        <Text style={styles.subtitle}>
+          Add your prescriptions or lab reports
+        </Text>
       </View>
 
       <View style={styles.content}>
@@ -79,14 +170,17 @@ export default function UploadScreen() {
             <View style={styles.uploadIcon}>
               <Upload color={Colors.primary} size={48} strokeWidth={1.5} />
             </View>
-            
+
             <Text style={styles.uploadTitle}>Click to Upload</Text>
             <Text style={styles.uploadDescription}>
               Choose from your device or take a photo
             </Text>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImageFromGallery}>
+              <TouchableOpacity
+                style={styles.uploadButton}
+                onPress={pickImageFromGallery}
+              >
                 <ImageIcon color="#FFFFFF" size={20} />
                 <Text style={styles.buttonText}>Choose from Device</Text>
               </TouchableOpacity>
@@ -104,13 +198,19 @@ export default function UploadScreen() {
               <Text style={styles.previewDescription}>
                 Your medical record has been selected and is ready to upload
               </Text>
-              
+
               <View style={styles.previewActions}>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setSelectedImage(null)}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setSelectedImage(null)}
+                >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.confirmButton} onPress={uploadRecord}>
+
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={uploadRecord}
+                >
                   <Text style={styles.confirmButtonText}>Upload Record</Text>
                 </TouchableOpacity>
               </View>
@@ -148,8 +248,8 @@ const styles = StyleSheet.create({
   },
   uploadSection: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingBottom: 100,
   },
   uploadIcon: {
@@ -157,8 +257,8 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: Colors.softBlue,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
   },
   uploadTitle: {
@@ -169,18 +269,18 @@ const styles = StyleSheet.create({
   uploadDescription: {
     ...Typography.body,
     color: Colors.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 32,
   },
   buttonContainer: {
-    width: '100%',
+    width: "100%",
     gap: 12,
   },
   uploadButton: {
     backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -188,9 +288,9 @@ const styles = StyleSheet.create({
   },
   cameraButton: {
     backgroundColor: Colors.cardBackground,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -200,7 +300,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...Typography.button,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   cameraButtonText: {
     ...Typography.button,
@@ -208,14 +308,14 @@ const styles = StyleSheet.create({
   },
   previewSection: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingBottom: 100,
   },
   previewCard: {
     backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -230,12 +330,12 @@ const styles = StyleSheet.create({
   previewDescription: {
     ...Typography.body,
     color: Colors.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 24,
   },
   previewActions: {
-    flexDirection: 'row',
-    width: '100%',
+    flexDirection: "row",
+    width: "100%",
     gap: 12,
   },
   cancelButton: {
@@ -244,7 +344,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -254,7 +354,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButtonText: {
     ...Typography.button,
@@ -263,7 +363,7 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     ...Typography.button,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
   },
 });

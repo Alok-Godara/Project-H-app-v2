@@ -1,7 +1,7 @@
 import { supabase } from './Supabase';
 
 // Type for uploadable file
-type Uploadable = File | Blob | Uint8Array | ArrayBuffer;
+type Uploadable = Blob | Uint8Array | ArrayBuffer | string;
 
 export async function uploadImageToBucket(
 	bucket: string,
@@ -9,6 +9,7 @@ export async function uploadImageToBucket(
 	file: Uploadable,
 	contentType: string = 'image/png'
 ): Promise<{ data: any; error: any }> {
+	// For React Native, file should be a base64 string or ArrayBuffer
 	const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
 		contentType,
 		upsert: true,

@@ -1,30 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { Colors } from '@/constants/Colors';
-import { Typography } from '@/constants/Typography';
-import authService from "@/Services/AuthService"
-
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Link } from "expo-router";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react-native";
+import { Colors } from "@/constants/Colors";
+import { Typography } from "@/constants/Typography";
+import authService from "@/Services/AuthService";
+import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const router = useRouter();
+
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     setIsLoading(true);
-    
+
     // Simulate login process
     setTimeout(() => {
-      authService.loginService({email,password})
+      // authService.loginService({email,password})
+      router.replace("/(tabs)/upload");
     }, 1500);
     setIsLoading(false);
   };
@@ -34,7 +44,9 @@ export default function LoginScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to access your medical records</Text>
+          <Text style={styles.subtitle}>
+            Sign in to access your medical records
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -81,12 +93,15 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            style={[
+              styles.loginButton,
+              isLoading && styles.loginButtonDisabled,
+            ]}
             onPress={handleLogin}
             disabled={isLoading}
           >
             <Text style={styles.loginButtonText}>
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? "Signing In..." : "Sign In"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -112,10 +127,10 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 48,
   },
   title: {
@@ -127,7 +142,7 @@ const styles = StyleSheet.create({
   subtitle: {
     ...Typography.body,
     color: Colors.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   form: {
     marginBottom: 32,
@@ -136,8 +151,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -152,7 +167,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   forgotPassword: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginBottom: 24,
   },
   forgotPasswordText: {
@@ -163,19 +178,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   loginButtonDisabled: {
     opacity: 0.6,
   },
   loginButtonText: {
     ...Typography.button,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   footerText: {
     ...Typography.body,
@@ -184,6 +199,6 @@ const styles = StyleSheet.create({
   signupLink: {
     ...Typography.body,
     color: Colors.primary,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
 });

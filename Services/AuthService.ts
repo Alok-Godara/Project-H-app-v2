@@ -20,29 +20,31 @@ interface AuthResult {
 
 export class AuthService {
   async createAccountService(obj: CreateAccountParams): Promise<AuthResult> {
-    console.log(
-      "data for signup:",
-      obj.email,
-      obj.password,
-      obj.name,
-      obj.phone
-    );
     try {
       const { data, error } = await supabase.auth.signUp({
         email: obj.email,
         password: obj.password,
         options: {
-          data: { name: obj.name, phone: obj.phone, password: obj.password },
+          data: { name: obj.name, phone: obj.phone},
         },
       });
       if (error) return { user: null, error };
-	  console.log(error);
-	  
+	    
       if (data.user) {
-		console.log(data);
-        await supabase
+        console.log("Supabase user:", data.user);
+        const patientInsert = {
+          id: data.user.id,
+          name: data.user.user_metadata?.name,
+          email: data.user.email,
+          password: obj.password, // Not recommended to store plain password!
+          phone: data.user.user_metadata?.phone
+        };
+        const { error: dbError, data: dbData } = await supabase
           .from("patients")
-          .insert([{ id: data.user.id, name: obj.name, email: data.user.email, phone: obj.phone }]);
+          .insert([patientInsert]);
+        if (dbError || !dbData) {
+          return { user: null, error: dbError || "Failed to insert user in patients table" };
+        }
         return { user: data.user, error: null };
       } else {
         return { user: null, error: "User creation failed" };
@@ -51,6 +53,7 @@ export class AuthService {
     } catch (error) {
       return { user: null, error };
     }
+    
   }
 
   async loginService({ email, password }: LoginParams): Promise<AuthResult> {

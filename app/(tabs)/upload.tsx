@@ -5,7 +5,8 @@ import {
   dummyMedicalEvent,
 } from "@/data/dummyMedicalEventAndDocument";
 import { insertRow, uploadImageToBucket } from "@/Services/Services";
-import * as FileSystem from "expo-file-system";
+import { Buffer } from "buffer";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Image as ImageIcon, Upload } from "lucide-react-native";
 import React, { useState } from "react";
@@ -89,28 +90,16 @@ export default function UploadScreen() {
         const fileUri = selectedImage;
         const fileName = fileUri.split("/").pop() || `record_${Date.now()}.png`;
         const fileExt = fileName.split(".").pop() || "png";
-        const bucket = "medical-records";
+  const bucket = "medical_data";
         const path = `${Date.now()}_${fileName}`;
 
 
         // Read file as blob using new File API (expo-file-system >=v54)
-        let fileBuffer;
-        if (FileSystem.File) {
-          // New API
-          // Use FileSystem.readAsStringAsync for reading file as base64
-          // @ts-ignore
-          const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
-            encoding: "base64",
-          });
-          fileBuffer = Buffer.from(fileBlob, "base64");
-        } else {
-          // Fallback to legacy API
-          // @ts-ignore
-          const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
-            encoding: "base64",
-          });
-          fileBuffer = Buffer.from(fileBlob, "base64");
-        }
+        // Read file as base64 using legacy API to avoid deprecation warning
+        const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: "base64",
+        });
+        const fileBuffer = Buffer.from(fileBlob, "base64");
 
         const { data: uploadData, error: uploadError } =
           await uploadImageToBucket(

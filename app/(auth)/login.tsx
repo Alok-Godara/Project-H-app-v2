@@ -8,12 +8,11 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { Colors } from "@/constants/Colors";
 import { Typography } from "@/constants/Typography";
 import authService from "@/Services/AuthService";
-import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");

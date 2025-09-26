@@ -1,14 +1,14 @@
 import { Colors } from "@/constants/Colors";
 import { Typography } from "@/constants/Typography";
+import {
+  dummyDocument,
+  dummyMedicalEvent,
+} from "@/data/dummyMedicalEventAndDocument";
 import { insertRow, uploadImageToBucket } from "@/Services/Services";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Image as ImageIcon, Upload } from "lucide-react-native";
 import React, { useState } from "react";
-import {
-  dummyMedicalEvent,
-  dummyDocument,
-} from "@/data/dummyMedicalEventAndDocument";
 import {
   Alert,
   Platform,
@@ -92,11 +92,25 @@ export default function UploadScreen() {
         const bucket = "medical-records";
         const path = `${Date.now()}_${fileName}`;
 
-        // Read file as blob
-        const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
-          encoding: "base64",
-        });
-        const fileBuffer = Buffer.from(fileBlob, "base64");
+
+        // Read file as blob using new File API (expo-file-system >=v54)
+        let fileBuffer;
+        if (FileSystem.File) {
+          // New API
+          // Use FileSystem.readAsStringAsync for reading file as base64
+          // @ts-ignore
+          const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: "base64",
+          });
+          fileBuffer = Buffer.from(fileBlob, "base64");
+        } else {
+          // Fallback to legacy API
+          // @ts-ignore
+          const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: "base64",
+          });
+          fileBuffer = Buffer.from(fileBlob, "base64");
+        }
 
         const { data: uploadData, error: uploadError } =
           await uploadImageToBucket(
@@ -132,16 +146,31 @@ export default function UploadScreen() {
         // 3. Call dummy API to get medical event and document data
         // Simulate API call by returning dummy data
         // In real scenario, replace with actual API call
+
         const apiResponse = {
           medical_event: { ...dummyMedicalEvent },
           document: { ...dummyDocument, file_url },
         };
 
+
         // 4. Update medical_events table with returned data
-        await insertRow("medical_events", apiResponse.medical_event);
+        const { error, data } = await insertRow(
+          "medical_events",
+          apiResponse.medical_event
+        );
+        if (error) {
+          console.error("[DB][medical_events] Insert Error:", error);
+        } else {
+          console.log("[DB][medical_events] Insert Success:", data);
+        }
 
         // 5. Update documents table with returned data
-        await insertRow("documents", apiResponse.document);
+        const { error: docError, data: docData } = await insertRow("documents", apiResponse.document);
+        if (docError) {
+          console.error("[DB][documents] Insert Error:", docError);
+        } else {
+          console.log("[DB][documents] Insert Success:", docData);
+        }
 
         Alert.alert("Success", "Medical record uploaded successfully!");
         setSelectedImage(null);

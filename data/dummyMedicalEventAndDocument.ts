@@ -1,8 +1,8 @@
 // Dummy data for medical_events and documents tables
 
 export const dummyMedicalEvent = {
-  id: 'event-uuid-123',
-  patient_id: 'patient-uuid-456',
+  // id: 'event-uuid-123',
+  // patient_id: 'patient-uuid-456',
   provider_name: 'Dr. John Doe',
   type: 'Consultation',
   title: 'General Checkup',
@@ -12,9 +12,9 @@ export const dummyMedicalEvent = {
 };
 
 export const dummyDocument = {
-  id: 'doc-uuid-789',
-  medical_event_id: 'event-uuid-123',
-  patient_id: 'patient-uuid-456',
+  // id: 'doc-uuid-789',
+  // medical_event_id: 'event-uuid-123',
+  // patient_id: 'patient-uuid-456',
   file_url: 'https://your-supabase-url/storage/v1/object/public/medical-records/sample.png',
   file_size: 204800, // in bytes
   is_processed: true,

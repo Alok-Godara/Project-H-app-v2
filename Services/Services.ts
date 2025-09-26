@@ -21,6 +21,16 @@ export async function insertRow(
 	table: string,
 	row: Record<string, any>
 ): Promise<{ data: any; error: any }> {
-	const { data, error } = await supabase.from(table).insert([row]).select().single();
+		console.log('[Supabase][Insert] Table:', table, 'Row:', row);
+		const { data, error } = await supabase.from(table).insert([row]).select().single();
+	// If data is an object with table keys, return it directly
+	if (data && typeof data === 'object' && !Array.isArray(data)) {
+		return { data, error };
+	}
+	// If data is an array, return the first item
+	if (Array.isArray(data) && data.length > 0) {
+		return { data: data[0], error };
+	}
+	// Otherwise, return as is
 	return { data, error };
 }

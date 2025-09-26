@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to save medical record images to your gallery.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs access to photo library to save medical record images to your gallery."
+      }
     },
     "android": {
       "adaptiveIcon": {

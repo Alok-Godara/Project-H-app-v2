@@ -3,10 +3,11 @@ import { Typography } from '@/constants/Typography';
 import { Download, Eye, Share } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { PrescriptionRecord, LabReportRecord } from '@/types/medical';
+
+import { MedicalRecord } from '@/types/medical';
 
 interface RecordCardProps {
-  record: PrescriptionRecord | LabReportRecord;
+  record: MedicalRecord;
   onView?: (id: string) => void;
   onShare?: (id: string) => void;
   onDownload?: (id: string) => void;
@@ -21,8 +22,11 @@ export default function RecordCard({ record, onView, onShare, onDownload }: Reco
     });
   };
 
+
   const isPrescription = record.type === 'prescription';
-  const isUploaded = record.uploadStatus === 'uploaded';
+  // If you want to show upload status, you may need to join with documents or add a field
+  const isUploaded = true;
+
 
   return (
     <View style={styles.card}>
@@ -39,25 +43,14 @@ export default function RecordCard({ record, onView, onShare, onDownload }: Reco
         </View>
       </View>
 
-      <Text style={styles.date}>{formatDate(record.date)}</Text>
+      <Text style={styles.date}>{formatDate(record.event_date)}</Text>
 
-      {isPrescription ? (
-        <View style={styles.details}>
-          <Text style={styles.purpose}>{(record as PrescriptionRecord).purpose}</Text>
-          <Text style={styles.doctorName}>{record.doctorName}</Text>
-          <Text style={styles.department}>{(record as PrescriptionRecord).department}</Text>
-          <Text style={styles.hospital}>{(record as PrescriptionRecord).hospitalName}</Text>
-        </View>
-      ) : (
-        <View style={styles.details}>
-          <Text style={styles.purpose}>{(record as LabReportRecord).testName}</Text>
-          <Text style={styles.doctorName}>Prescribed by: {(record as LabReportRecord).prescribedBy}</Text>
-          <Text style={styles.department}>{(record as LabReportRecord).doctorDepartment}</Text>
-          <Text style={styles.hospital}>{(record as LabReportRecord).hospitalName}</Text>
-          <Text style={styles.laboratory}>{(record as LabReportRecord).laboratoryName}</Text>
-          <Text style={styles.labAddress}>{(record as LabReportRecord).laboratoryAddress}</Text>
-        </View>
-      )}
+      <View style={styles.details}>
+        <Text style={styles.purpose}>{record.title}</Text>
+        <Text style={styles.doctorName}>{record.provider_name}</Text>
+        <Text style={styles.department}>{record.type}</Text>
+        <Text style={styles.hospital}>{record.description}</Text>
+      </View>
 
       {isUploaded && (
         <View style={styles.actions}>
@@ -69,10 +62,10 @@ export default function RecordCard({ record, onView, onShare, onDownload }: Reco
             <Share color="#34C759" size={16} />
             <Text style={styles.shareButtonText}>Share</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.downloadButton]} onPress={() => onDownload?.(record.id)}>
+          {/* <TouchableOpacity style={[styles.actionButton, styles.downloadButton]} onPress={() => onDownload?.(record.id)}>
             <Download color="#8E8E93" size={16} />
             <Text style={styles.downloadButtonText}>Download</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       )}
     </View>

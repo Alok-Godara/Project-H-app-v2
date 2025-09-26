@@ -1,27 +1,15 @@
+
+// Unified type matching the medical_events table
 export interface MedicalRecord {
   id: string;
-  type: 'prescription' | 'lab_report';
-  date: string;
-  uploadStatus: 'pending' | 'uploaded';
-  createdAt: string;
-}
-
-export interface PrescriptionRecord extends MedicalRecord {
-  type: 'prescription';
-  purpose: string;
-  doctorName: string;
-  department: string;
-  hospitalName: string;
-}
-
-export interface LabReportRecord extends MedicalRecord {
-  type: 'lab_report';
-  testName: string;
-  prescribedBy: string;
-  doctorDepartment: string;
-  hospitalName: string;
-  laboratoryName: string;
-  laboratoryAddress: string;
+  patient_id: string;
+  provider_name: string;
+  type: string; // 'prescription' | 'lab_report' | ...
+  title: string;
+  description: string;
+  event_date: string;
+  created_at: string;
+  // Optionally add file_url, file_size, is_processed if you join with documents
 }
 
 export interface ConsentRequest {

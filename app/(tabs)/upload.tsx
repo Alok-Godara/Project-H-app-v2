@@ -1,16 +1,15 @@
 import { Colors } from "@/constants/Colors";
 import { Typography } from "@/constants/Typography";
-import {
-  dummyDocument,
-  dummyMedicalEvent,
-} from "@/data/dummyMedicalEventAndDocument";
+import { dummyDocument } from "@/data/dummyMedicalEventAndDocument";
 import { insertRow, uploadImageToBucket } from "@/Services/Services";
+import axios from "axios";
 import { Buffer } from "buffer";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Image as ImageIcon, Upload } from "lucide-react-native";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   StyleSheet,
@@ -22,6 +21,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function UploadScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [patient_id]= useState<string>("396d9e5e-9ba6-4e9e-87e2-fcdcc94eceb8");
+  const [loading, setLoading] = useState(false);
 
   const requestPermissions = async () => {
     if (Platform.OS !== "web") {
@@ -45,8 +46,8 @@ export default function UploadScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
-      aspect: [4, 3],
       quality: 1,
+      // No aspect property: free crop, select full image by default
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -74,8 +75,8 @@ export default function UploadScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [4, 3],
       quality: 1,
+      // No aspect property: free crop, select full image by default
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -85,17 +86,16 @@ export default function UploadScreen() {
 
   const uploadRecord = async () => {
     if (selectedImage) {
+      setLoading(true);
       try {
         // 1. Upload to Supabase Storage
         const fileUri = selectedImage;
         const fileName = fileUri.split("/").pop() || `record_${Date.now()}.png`;
         const fileExt = fileName.split(".").pop() || "png";
-  const bucket = "medical_data";
+        const bucket = "medical_data";
         const path = `${Date.now()}_${fileName}`;
 
-
-        // Read file as blob using new File API (expo-file-system >=v54)
-        // Read file as base64 using legacy API to avoid deprecation warning
+        // Read file as base64 using legacy API
         const fileBlob = await FileSystem.readAsStringAsync(fileUri, {
           encoding: "base64",
         });
@@ -115,30 +115,32 @@ export default function UploadScreen() {
           ? `${uploadData.fullPath || uploadData.path}`
           : "";
 
-        // // 3. Call external API (dummy placeholder)
-        // let api_data = null;
-        // try {
-        //   // Replace with your actual API call
-        //   const response = await fetch(
-        //     "https://your-api-endpoint.com/analyze",
-        //     {
-        //       method: "POST",
-        //       headers: { "Content-Type": "application/json" },
-        //       body: JSON.stringify({ file_url }),
-        //     }
-        //   );
-        //   api_data = await response.json();
-        // } catch {
-        //   api_data = null;
-        // }
-
-
-        // 3. Prepare medical event data
-        const patient_id = "396d9e5e-9ba6-4e9e-87e2-fcdcc94eceb8";
-        const medicalEventData = {
-          ...dummyMedicalEvent,
-          patient_id,
-        };
+        // 3. Call external API to extract medical event data
+        let medicalEventData = null;
+        try {
+          // Read file as binary for FormData
+          let formData = new FormData();
+          // In React Native, FormData file must be { uri, name, type } and cast as any for TS
+          formData.append("file", {
+            uri: fileUri,
+            name: fileName,
+            type: `image/${fileExt}`,
+          } as any);
+          const response = await axios.post(
+            "https://ph-api-qjug.onrender.com/extract",
+            formData,
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+            }
+          );
+          medicalEventData = {
+            ...(typeof response.data === "object" && response.data !== null ? response.data : {}),
+            patient_id,
+          };
+        } catch (apiErr) {
+          console.error("[API][extract] Error:", apiErr);
+          throw new Error("Failed to extract data from image.");
+        }
 
         // 4. Insert medical event and get its id
         const { error, data } = await insertRow(
@@ -168,9 +170,11 @@ export default function UploadScreen() {
           console.log("[DB][documents] Insert Success:", docData);
         }
 
-        Alert.alert("Success", "Medical record uploaded successfully!");
-        setSelectedImage(null);
+  setLoading(false);
+  Alert.alert("Success", "Medical record uploaded successfully!");
+  setSelectedImage(null);
       } catch (err) {
+        setLoading(false);
         let message = "Something went wrong.";
         if (err && typeof err === "object" && "message" in err) {
           message = (err as any).message;
@@ -190,7 +194,17 @@ export default function UploadScreen() {
       </View>
 
       <View style={styles.content}>
-        {!selectedImage ? (
+        {loading && (
+          <View style={styles.spinnerContainer}>
+            <View style={styles.spinnerBackground} />
+            <View style={styles.spinnerBox}>
+              <Text style={styles.spinnerText}>Uploading...</Text>
+              {/* Use ActivityIndicator from react-native */}
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          </View>
+        )}
+        {!loading && (!selectedImage ? (
           <View style={styles.uploadSection}>
             <View style={styles.uploadIcon}>
               <Upload color={Colors.primary} size={48} strokeWidth={1.5} />
@@ -241,13 +255,41 @@ export default function UploadScreen() {
               </View>
             </View>
           </View>
-        )}
+        ))}
       </View>
     </SafeAreaView>
   );
 }
 
+
+
 const styles = StyleSheet.create({
+  spinnerContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  spinnerBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.2)",
+  },
+  spinnerBox: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  spinnerText: {
+    ...Typography.body,
+    color: Colors.text.primary,
+    marginBottom: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

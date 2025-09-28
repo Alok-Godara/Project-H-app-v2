@@ -21,7 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function UploadScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [patient_id]= useState<string>("396d9e5e-9ba6-4e9e-87e2-fcdcc94eceb8");
+  const [patient_id]= useState<string>("a2b46eeb-b0d1-4e57-955f-ccf76143b2a1");
   const [loading, setLoading] = useState(false);
 
   const requestPermissions = async () => {

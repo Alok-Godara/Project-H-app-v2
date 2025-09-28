@@ -17,7 +17,7 @@ export default function RecordsScreen() {
   const [selectedFilter] = useState<'all' | 'prescription' | 'lab_report'>('all');
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [PatientId] = useState<string>('396d9e5e-9ba6-4e9e-87e2-fcdcc94eceb8');
+  const [PatientId] = useState<string>('a2b46eeb-b0d1-4e57-955f-ccf76143b2a1');
   // Image modal state
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
@@ -165,13 +165,13 @@ export default function RecordsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Medical Records</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.viewToggle} onPress={handleViewModeToggle}>
+          {/* <TouchableOpacity style={styles.viewToggle} onPress={handleViewModeToggle}> */}
             {/* {viewMode === 'card' ? (
               <List color={Colors.text.secondary} size={20} />
             ) : (
               <Grid color={Colors.text.secondary} size={20} />
             )} */}
-          </TouchableOpacity>
+          {/* </TouchableOpacity> */}
           {/* <FilterButton onPress={handleFilter} /> */}
         </View>
       </View>

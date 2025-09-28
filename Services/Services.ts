@@ -34,3 +34,25 @@ export async function insertRow(
 	// Otherwise, return as is
 	return { data, error };
 }
+
+export async function updatePatientProfile(
+	patientId: string,
+	updates: Record<string, any>
+): Promise<{ data: any; error: any }> {
+	console.log('[Supabase][Update] Patient ID:', patientId, 'Updates:', updates);
+	
+	// Add updated_at timestamp
+	const updatesWithTimestamp = {
+		...updates,
+		updated_at: new Date().toISOString()
+	};
+	
+	const { data, error } = await supabase
+		.from('patients')
+		.update(updatesWithTimestamp)
+		.eq('id', patientId)
+		.select()
+		.single();
+		
+	return { data, error };
+}

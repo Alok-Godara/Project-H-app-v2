@@ -1,8 +1,7 @@
 import ProfileCard from '@/components/ProfileCard';
 import { Colors } from '@/constants/Colors';
-import { mockPatientProfile } from '@/data/mockData';
 import authService from '@/Services/AuthService';
-import { updatePatientProfile } from '@/Services/Services';
+import { getCurrentPatientId, updatePatientProfile } from '@/Services/Services';
 import { PatientProfile } from '@/types/medical';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -11,7 +10,20 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, Touc
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const [profile, setProfile] = useState<PatientProfile>(mockPatientProfile);
+  const [profile, setProfile] = useState<PatientProfile>({
+    personalInfo: {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+    },
+    healthInfo: {
+      allergies: '',
+      bloodType: '',
+      chronicConditions: '',
+      emergencyContact: '',
+    },
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,8 +33,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
-  // For now using hardcoded patient ID - replace with actual logged-in user ID
-  const [patientId] = useState<string>('a2b46eeb-b0d1-4e57-955f-ccf76143b2a1');
+  const [patientId, setPatientId] = useState<string | null>(null);
   const router = useRouter();
 
   // Function to get current logged-in user's patient ID (commented for future use)
@@ -44,11 +55,20 @@ export default function ProfileScreen() {
   const fetchPatientProfile = useCallback(async () => {
     setLoading(true);
     try {
+      // Get current patient ID from session
+      const currentPatientId = await getCurrentPatientId();
+      if (!currentPatientId) {
+        Alert.alert('Error', 'No authenticated user found');
+        setLoading(false);
+        return;
+      }
+      setPatientId(currentPatientId);
+      
       const { supabase } = await import('@/Services/Supabase');
       const { data, error } = await supabase
         .from('patients')
         .select('*')
-        .eq('id', patientId)
+        .eq('id', currentPatientId)
         .single();
       
       if (error) {
@@ -91,7 +111,7 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }, [patientId]);
+  }, []); // Removed patientId dependency as it's fetched inside the function
 
   // Reload profile data when screen is focused
   useFocusEffect(
@@ -113,6 +133,11 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (!patientId) {
+        Alert.alert('Error', 'No authenticated user found');
+        setSaving(false);
+        return;
+      }
       const { error } = await updatePatientProfile(patientId, formData);
       
       if (error) {

@@ -3,21 +3,20 @@ import RecordCard from '@/components/RecordCard';
 import SectionHeader from '@/components/SectionHeader';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
+import { getCurrentPatientId } from '@/Services/Services';
 import { MedicalRecord } from '@/types/medical';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RecordsScreen() {
 
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [selectedFilter] = useState<'all' | 'prescription' | 'lab_report'>('all');
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [PatientId] = useState<string>('a2b46eeb-b0d1-4e57-955f-ccf76143b2a1');
   // Image modal state
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
@@ -25,11 +24,21 @@ export default function RecordsScreen() {
   // Fetch records function
   const fetchRecords = useCallback(async () => {
     setLoading(true);
+    
+    // Get current patient ID from session
+    const currentPatientId = await getCurrentPatientId();
+    if (!currentPatientId) {
+      console.error('No authenticated user found');
+      setRecords([]);
+      setLoading(false);
+      return;
+    }
+    
     const { data, error } = await import('@/Services/Supabase').then(({ supabase }) =>
       supabase
         .from('medical_events')
         .select('*')
-        .eq('patient_id', PatientId)
+        .eq('patient_id', currentPatientId)
         .order('created_at', { ascending: true })
     );
     if (error) {
@@ -39,7 +48,7 @@ export default function RecordsScreen() {
       setRecords(data || []);
     }
     setLoading(false);
-  }, [PatientId]);
+  }, []); // Removed PatientId dependency as it's fetched inside the function
 
   // Reload records every time the screen is focused
   useFocusEffect(
@@ -73,9 +82,9 @@ export default function RecordsScreen() {
   //   console.log('Filter pressed');
   // };
 
-  const handleViewModeToggle = () => {
-    setViewMode(viewMode === 'card' ? 'list' : 'card');
-  };
+  // const handleViewModeToggle = () => {
+  //   setViewMode(viewMode === 'card' ? 'list' : 'card');
+  // };
 
   // Helper to get public URL from Supabase storage for a given medical_event_id
   const getDocumentPublicUrl = async (medical_event_id: string) => {

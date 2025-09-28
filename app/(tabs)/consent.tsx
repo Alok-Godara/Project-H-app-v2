@@ -2,20 +2,17 @@ import ConsentCard from '@/components/ConsentCard';
 import FilterButton from '@/components/FilterButton';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
-import { getProviderAccessRequests, updateProviderAccessStatus } from '@/Services/Services';
+import { getCurrentPatientId, getProviderAccessRequests, updateProviderAccessStatus } from '@/Services/Services';
 import { ConsentRequest } from '@/types/medical';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ConsentScreen() {
   const [requests, setRequests] = useState<ConsentRequest[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'pending' | 'allowed' | 'denied' | 'revoked'>('all');
+  const [selectedFilter] = useState<'all' | 'pending' | 'allowed' | 'denied' | 'revoked'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Hardcoded patient ID - this should come from authentication
-  const patientId = 'a2b46eeb-b0d1-4e57-955f-ccf76143b2a1';
 
   useEffect(() => {
     loadConsentRequests();
@@ -24,7 +21,17 @@ export default function ConsentScreen() {
   const loadConsentRequests = async () => {
     try {
       setLoading(true);
-      const { data, error } = await getProviderAccessRequests(patientId);
+      
+      // Get current patient ID from session
+      const currentPatientId = await getCurrentPatientId();
+      if (!currentPatientId) {
+        Alert.alert('Error', 'No authenticated user found');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      
+      const { data, error } = await getProviderAccessRequests(currentPatientId);
       
       if (error) {
         console.error('Error fetching consent requests:', error);

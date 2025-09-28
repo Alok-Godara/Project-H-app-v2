@@ -125,9 +125,21 @@ export async function updateProviderAccessStatus(
 	return { data, error };
 }
 
-// Placeholder for authentication - will be implemented with auth system
+// Get current patient ID from authenticated session
 export async function getCurrentPatientId(): Promise<string | null> {
-	// TODO: Replace with actual authentication logic
-	// For now, return hardcoded patient ID
-	return 'a2b46eeb-b0d1-4e57-955f-ccf76143b2a1';
+	try {
+		const { supabase } = await import('./Supabase');
+		const { data: { user }, error } = await supabase.auth.getUser();
+		
+		if (error || !user) {
+			console.error('Error getting current user:', error);
+			return null;
+		}
+		
+		// The user.id should match the patient.id in the patients table
+		return user.id;
+	} catch (error) {
+		console.error('Error fetching current patient ID:', error);
+		return null;
+	}
 }

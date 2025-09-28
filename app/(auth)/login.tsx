@@ -1,18 +1,18 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Link, useRouter } from "expo-router";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { Colors } from "@/constants/Colors";
 import { Typography } from "@/constants/Typography";
 import authService from "@/Services/AuthService";
+import { Link, useRouter } from "expo-router";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react-native";
+import React, { useState } from "react";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -23,19 +23,34 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const handleLogin = async () => {
-    // if (!email || !password) {
-    //   Alert.alert("Error", "Please fill in all fields");
-    //   return;
-    // }
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
 
     setIsLoading(true);
 
-    // Simulate login process
-    setTimeout(() => {
-      // authService.loginService({email,password})
-      router.replace("/(tabs)/upload");
-    }, 1500);
-    setIsLoading(false);
+    try {
+      const { user, error } = await authService.loginService({ email, password });
+      
+      if (error) {
+        Alert.alert("Login Failed", error.message || "Invalid credentials. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (user) {
+        // Login successful, navigate to main app
+        router.replace("/(tabs)/upload");
+      } else {
+        Alert.alert("Login Failed", "Authentication failed. Please try again.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

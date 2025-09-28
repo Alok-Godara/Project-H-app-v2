@@ -14,10 +14,18 @@ export interface MedicalRecord {
 
 export interface ConsentRequest {
   id: string;
-  date: string;
-  doctorName: string;
-  purpose: string;
-  status: 'pending' | 'granted' | 'denied' | 'revoked';
+  provider_id: string;
+  patient_id: string;
+  granted_at: string | null;
+  status: 'pending' | 'allowed' | 'denied' | 'revoked';
+  providers: {
+    id: string;
+    name: string;
+    email: string;
+    specialty: string;
+    license_number: string;
+    phone: string;
+  };
 }
 
 export interface PatientProfile {

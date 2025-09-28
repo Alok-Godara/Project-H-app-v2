@@ -1,44 +1,144 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import ConsentCard from '@/components/ConsentCard';
 import FilterButton from '@/components/FilterButton';
-import { mockConsentRequests } from '@/data/mockData';
-import { ConsentRequest } from '@/types/medical';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
+import { getProviderAccessRequests, updateProviderAccessStatus } from '@/Services/Services';
+import { ConsentRequest } from '@/types/medical';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ConsentScreen() {
-  const [requests, setRequests] = useState<ConsentRequest[]>(mockConsentRequests);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'pending' | 'granted' | 'denied'>('all');
+  const [requests, setRequests] = useState<ConsentRequest[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'pending' | 'allowed' | 'denied' | 'revoked'>('all');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Hardcoded patient ID - this should come from authentication
+  const patientId = 'a2b46eeb-b0d1-4e57-955f-ccf76143b2a1';
+
+  useEffect(() => {
+    loadConsentRequests();
+  }, []);
+
+  const loadConsentRequests = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await getProviderAccessRequests(patientId);
+      
+      if (error) {
+        console.error('Error fetching consent requests:', error);
+        Alert.alert('Error', 'Failed to load consent requests');
+        return;
+      }
+
+      if (data) {
+        setRequests(data);
+      }
+    } catch (error) {
+      console.error('Error loading consent requests:', error);
+      Alert.alert('Error', 'Failed to load consent requests');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const filteredRequests = requests.filter(request => 
     selectedFilter === 'all' || request.status === selectedFilter
   );
 
   const handleFilter = () => {
-    console.log('Filter pressed');
+    setRefreshing(true);
+    loadConsentRequests();
   };
 
-  const handleGrant = (id: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === id ? { ...req, status: 'granted' } : req
-    ));
-    Alert.alert('Access Granted', 'Doctor can now access your medical records.');
+  const handleGrant = async (id: string) => {
+    try {
+      const { data, error } = await updateProviderAccessStatus(id, 'allowed');
+      
+      if (error) {
+        console.error('Error granting access:', error);
+        Alert.alert('Error', 'Failed to grant access');
+        return;
+      }
+
+      if (data) {
+        setRequests(prev => prev.map(req => 
+          req.id === id ? data : req
+        ));
+        Alert.alert('Access Granted', 'Provider can now access your medical records.');
+      }
+    } catch (error) {
+      console.error('Error granting access:', error);
+      Alert.alert('Error', 'Failed to grant access');
+    }
   };
 
-  const handleDeny = (id: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === id ? { ...req, status: 'denied' } : req
-    ));
-    Alert.alert('Access Denied', 'Doctor\'s request has been denied.');
+  const handleDeny = async (id: string) => {
+    try {
+      const { data, error } = await updateProviderAccessStatus(id, 'denied');
+      
+      if (error) {
+        console.error('Error denying access:', error);
+        Alert.alert('Error', 'Failed to deny access');
+        return;
+      }
+
+      if (data) {
+        setRequests(prev => prev.map(req => 
+          req.id === id ? data : req
+        ));
+        Alert.alert('Access Denied', 'Provider\'s request has been denied.');
+      }
+    } catch (error) {
+      console.error('Error denying access:', error);
+      Alert.alert('Error', 'Failed to deny access');
+    }
   };
 
   const handleRevoke = (id: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === id ? { ...req, status: 'revoked' } : req
-    ));
-    Alert.alert('Access Revoked', 'Doctor\'s access has been revoked.');
+    // Find the provider name for the warning
+    const request = requests.find(req => req.id === id);
+    const providerName = request?.providers?.name || 'this provider';
+
+    Alert.alert(
+      'Revoke Access',
+      `Are you sure you want to revoke ${providerName}'s access to your medical records? This action will immediately prevent them from viewing your data.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Revoke Access',
+          style: 'destructive',
+          onPress: () => performRevoke(id),
+        },
+      ]
+    );
+  };
+
+  const performRevoke = async (id: string) => {
+    try {
+      const { data, error } = await updateProviderAccessStatus(id, 'revoked');
+      
+      if (error) {
+        console.error('Error revoking access:', error);
+        Alert.alert('Error', 'Failed to revoke access');
+        return;
+      }
+
+      if (data) {
+        setRequests(prev => prev.map(req => 
+          req.id === id ? data : req
+        ));
+        Alert.alert('Access Revoked', 'Provider\'s access has been revoked successfully.');
+      }
+    } catch (error) {
+      console.error('Error revoking access:', error);
+      Alert.alert('Error', 'Failed to revoke access');
+    }
   };
 
   return (
@@ -48,7 +148,7 @@ export default function ConsentScreen() {
         <FilterButton onPress={handleFilter} />
       </View>
 
-      <View style={styles.filterTabs}>
+      {/* <View style={styles.filterTabs}>
         <TouchableOpacity
           style={[styles.filterTab, selectedFilter === 'all' && styles.activeFilterTab]}
           onPress={() => setSelectedFilter('all')}
@@ -66,11 +166,11 @@ export default function ConsentScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterTab, selectedFilter === 'granted' && styles.activeFilterTab]}
-          onPress={() => setSelectedFilter('granted')}
+          style={[styles.filterTab, selectedFilter === 'allowed' && styles.activeFilterTab]}
+          onPress={() => setSelectedFilter('allowed')}
         >
-          <Text style={[styles.filterTabText, selectedFilter === 'granted' && styles.activeFilterTabText]}>
-            Granted
+          <Text style={[styles.filterTabText, selectedFilter === 'allowed' && styles.activeFilterTabText]}>
+            Allowed
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -81,11 +181,34 @@ export default function ConsentScreen() {
             Denied
           </Text>
         </TouchableOpacity>
-      </View>
+        <TouchableOpacity
+          style={[styles.filterTab, selectedFilter === 'revoked' && styles.activeFilterTab]}
+          onPress={() => setSelectedFilter('revoked')}
+        >
+          <Text style={[styles.filterTabText, selectedFilter === 'revoked' && styles.activeFilterTabText]}>
+            Revoked
+          </Text>
+        </TouchableOpacity>
+      </View> */}
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleFilter}
+            colors={[Colors.primary]}
+          />
+        }
+      >
         <View style={styles.requestsContainer}>
-          {filteredRequests.length > 0 ? (
+          {loading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.loadingText}>Loading consent requests...</Text>
+            </View>
+          ) : filteredRequests.length > 0 ? (
             filteredRequests.map((request) => (
               <ConsentCard
                 key={request.id}
@@ -99,7 +222,7 @@ export default function ConsentScreen() {
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>No consent requests found</Text>
               <Text style={styles.emptyStateSubtext}>
-                Doctor requests will appear here when they need access to your records
+                Provider requests will appear here when they need access to your records
               </Text>
             </View>
           )}
@@ -171,5 +294,15 @@ const styles = StyleSheet.create({
     color: Colors.text.tertiary,
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  loadingState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    ...Typography.body,
+    color: Colors.text.secondary,
+    marginTop: 16,
   },
 });

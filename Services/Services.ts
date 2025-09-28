@@ -56,3 +56,78 @@ export async function updatePatientProfile(
 		
 	return { data, error };
 }
+
+export async function getProviderAccessRequests(
+	patientId: string
+): Promise<{ data: any; error: any }> {
+	console.log('[Supabase][Select] Getting provider access requests for patient:', patientId);
+	
+	const { data, error } = await supabase
+		.from('provider_patient_access')
+		.select(`
+			id,
+			provider_id,
+			patient_id,
+			granted_at,
+			status,
+			providers (
+				id,
+				name,
+				email,
+				specialty,
+				license_number,
+				phone
+			)
+		`)
+		.eq('patient_id', patientId)
+		.order('granted_at', { ascending: false });
+		
+	return { data, error };
+}
+
+export async function updateProviderAccessStatus(
+	accessId: string,
+	status: string
+): Promise<{ data: any; error: any }> {
+	console.log('[Supabase][Update] Updating access status for:', accessId, 'Status:', status);
+	
+	const updates: Record<string, any> = {
+		status,
+		updated_at: new Date().toISOString()
+	};
+	
+	// If allowing access, set granted_at timestamp
+	if (status === 'allowed') {
+		updates.granted_at = new Date().toISOString();
+	}
+	
+	const { data, error } = await supabase
+		.from('provider_patient_access')
+		.update(updates)
+		.eq('id', accessId)
+		.select(`
+			id,
+			provider_id,
+			patient_id,
+			granted_at,
+			status,
+			providers (
+				id,
+				name,
+				email,
+				specialty,
+				license_number,
+				phone
+			)
+		`)
+		.single();
+		
+	return { data, error };
+}
+
+// Placeholder for authentication - will be implemented with auth system
+export async function getCurrentPatientId(): Promise<string | null> {
+	// TODO: Replace with actual authentication logic
+	// For now, return hardcoded patient ID
+	return 'a2b46eeb-b0d1-4e57-955f-ccf76143b2a1';
+}

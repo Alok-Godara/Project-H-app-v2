@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { ConsentRequest } from '@/types/medical';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // type ConsentRequest = {
 //   id: string;
@@ -20,7 +20,10 @@ interface ConsentCardProps {
 }
 
 export default function ConsentCard({ request, onGrant, onDeny, onRevoke }: ConsentCardProps) {
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) {
+      return 'Request pending';
+    }
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -30,7 +33,7 @@ export default function ConsentCard({ request, onGrant, onDeny, onRevoke }: Cons
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'granted':
+      case 'allowed':
         return Colors.success;
       case 'denied':
         return Colors.error;
@@ -61,11 +64,11 @@ export default function ConsentCard({ request, onGrant, onDeny, onRevoke }: Cons
       );
     }
 
-    if (request.status === 'granted') {
+    if (request.status === 'allowed') {
       return (
         <View style={styles.actions}>
           <View style={styles.statusIndicator}>
-            <Text style={styles.grantedText}>Access Granted</Text>
+            <Text style={styles.grantedText}>Access Allowed</Text>
           </View>
           <TouchableOpacity
             style={[styles.actionButton, styles.revokeButton]}
@@ -80,7 +83,9 @@ export default function ConsentCard({ request, onGrant, onDeny, onRevoke }: Cons
     return (
       <View style={styles.statusIndicator}>
         <Text style={[styles.statusOnlyText, { color: getStatusColor(request.status) }]}>
-          {request.status === 'denied' ? 'Access Denied' : 'Access Revoked'}
+          {request.status === 'denied' ? 'Access Denied' : 
+           request.status === 'revoked' ? 'Access Revoked' : 
+           request.status === 'allowed' ? 'Access Allowed' : 'Pending Review'}
         </Text>
       </View>
     );
@@ -89,7 +94,7 @@ export default function ConsentCard({ request, onGrant, onDeny, onRevoke }: Cons
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.date}>{formatDate(request.date)}</Text>
+        <Text style={styles.date}>{formatDate(request.granted_at)}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}>
           <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
             {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
@@ -97,8 +102,9 @@ export default function ConsentCard({ request, onGrant, onDeny, onRevoke }: Cons
         </View>
       </View>
 
-      <Text style={styles.doctorName}>{request.doctorName}</Text>
-      <Text style={styles.purpose}>{request.purpose}</Text>
+      <Text style={styles.doctorName}>{request.providers.name}</Text>
+      <Text style={styles.specialty}>{request.providers.specialty}</Text>
+      <Text style={styles.licenseNumber}>License: {request.providers.license_number}</Text>
 
       {renderActions()}
     </View>
@@ -146,6 +152,17 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginBottom: 16,
     lineHeight: 20,
+  },
+  specialty: {
+    ...Typography.body,
+    color: Colors.text.secondary,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  licenseNumber: {
+    ...Typography.caption,
+    color: Colors.text.tertiary,
+    marginBottom: 16,
   },
   actions: {
     flexDirection: 'row',
